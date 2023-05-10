@@ -30,7 +30,7 @@ contract InteractiveProtocol {
         emit TaskSubmitted(taskId, msg.sender, _script);
     }
 
-    function bidForTask(uint256 _taskId, uint256 _bidAmount) external {
+    function submitBid(uint256 _taskId, uint256 _bidAmount) external {
         Task storage existingTask = tasks[_taskId];
         require(existingTask.taskId == _taskId && !existingTask.isCompleted, "Invalid task ID or task already completed");
 
