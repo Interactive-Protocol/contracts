@@ -1,71 +1,78 @@
-function getTaskCount() external view returns (uint256) {
-    return taskId;
-}
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
 
-function getTaskDetails(uint256 _taskId) external view returns (Task memory) {
-    require(_taskId <= taskId, "Invalid task ID");
+import "./IERC20.sol";
 
-    return tasks[_taskId];
-}
+contract InteractToken is IERC20 {
+    string public constant name = "Interact";
+    string public constant symbol = "INT";
+    uint8 public constant decimals = 18;
+    uint256 private _totalSupply;
 
-function isTaskCompleted(uint256 _taskId) external view returns (bool) {
-    require(_taskId <= taskId, "Invalid task ID");
+    mapping(address => uint256) private _balances;
+    mapping(address => mapping(address => uint256)) private _allowances;
 
-    return tasks[_taskId].isCompleted;
-}
-
-function getUserTasks() external view returns (uint256[] memory) {
-    uint256[] memory userTaskIds = new uint256[](taskId);
-    uint256 count = 0;
-
-    for (uint256 i = 1; i <= taskId; i++) {
-        if (tasks[i].user == msg.sender) {
-            userTaskIds[count] = i;
-            count++;
-        }
+    constructor(uint256 initialSupply) {
+        _totalSupply = initialSupply * 10**decimals;
+        _balances[msg.sender] = _totalSupply;
+        emit Transfer(address(0), msg.sender, _totalSupply);
     }
 
-    uint256[] memory result = new uint256[](count);
-    for (uint256 i = 0; i < count; i++) {
-        result[i] = userTaskIds[i];
+    function totalSupply() external view override returns (uint256) {
+        return _totalSupply;
     }
 
-    return result;
-}
-
-function getNodeTasks() external view returns (uint256[] memory) {
-    uint256[] memory nodeTaskIds = new uint256[](taskId);
-    uint256 count = 0;
-
-    for (uint256 i = 1; i <= taskId; i++) {
-        if (tasks[i].selectedNode == msg.sender) {
-            nodeTaskIds[count] = i;
-            count++;
-        }
+    function balanceOf(address account) external view override returns (uint256) {
+        return _balances[account];
     }
 
-    uint256[] memory result = new uint256[](count);
-    for (uint256 i = 0; i < count; i++) {
-        result[i] = nodeTaskIds[i];
+    function transfer(address recipient, uint256 amount) external override returns (bool) {
+        _transfer(msg.sender, recipient, amount);
+        return true;
     }
 
-    return result;
-}
+    function allowance(address owner, address spender) external view override returns (uint256) {
+        return _allowances[owner][spender];
+    }
 
-function cancelTask(uint256 _taskId) external {
-    Task storage existingTask = tasks[_taskId];
-    require(existingTask.taskId == _taskId, "Invalid task ID");
-    require(existingTask.user == msg.sender, "Only task owner can cancel the task");
-    require(!existingTask.isCompleted, "Task has already been completed");
+    function approve(address spender, uint256 amount) external override returns (bool) {
+        _approve(msg.sender, spender, amount);
+        return true;
+    }
 
-    delete tasks[_taskId];
-}
+    function transferFrom(address sender, address recipient, uint256 amount) external override returns (bool) {
+        _transfer(sender, recipient, amount);
+        _approve(sender, msg.sender, _allowances[sender][msg.sender] - amount);
+        return true;
+    }
 
-function updateTaskResult(uint256 _taskId, string calldata _result) external {
-    Task storage existingTask = tasks[_taskId];
-    require(existingTask.taskId == _taskId, "Invalid task ID");
-    require(existingTask.selectedNode == msg.sender, "Only selected node can update task result");
-    require(existingTask.isCompleted, "Task has not been completed");
+    function increaseAllowance(address spender, uint256 addedValue) external returns (bool) {
+        _approve(msg.sender, spender, _allowances[msg.sender][spender] + addedValue);
+        return true;
+    }
 
-    existingTask.result = _result;
+    function decreaseAllowance(address spender, uint256 subtractedValue) external returns (bool) {
+        _approve(msg.sender, spender, _allowances[msg.sender][spender] - subtractedValue);
+        return true;
+    }
+
+    function _transfer(address sender, address recipient, uint256 amount) internal {
+        require(sender != address(0), "Transfer from zero address");
+        require(recipient != address(0), "Transfer to zero address");
+        require(_balances[sender] >= amount, "Insufficient balance");
+
+        _balances[sender] -= amount;
+        _balances[recipient] += amount;
+
+        emit Transfer(sender, recipient, amount);
+    }
+
+    function _approve(address owner, address spender, uint256 amount) internal {
+        require(owner != address(0), "Approve from zero address");
+        require(spender != address(0), "Approve to zero address");
+
+        _allowances[owner][spender] = amount;
+
+        emit Approval(owner, spender, amount);
+    }
 }
